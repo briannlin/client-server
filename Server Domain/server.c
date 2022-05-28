@@ -9,6 +9,42 @@
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Server Domain'.
 #define PORT 9999
 
+// Sending and receiving an entire file.
+int receive_upload(client_socket){
+    int received_size;
+    char destination_path[] = "./Local Directory/received_file.jpg";  // Note how we don't have the original file name.
+    int chunk_size = 1000;
+    char file_chunk[chunk_size];
+//    int chunk_counter = 0;
+
+    FILE *fptr;
+
+    // Opening a new file in write-binary mode to write the received file bytes into the disk using fptr.
+    fptr = fopen(destination_path,"wb");
+
+    // Keep receiving bytes until we receive the whole file.
+    while (1){
+        bzero(file_chunk, chunk_size);
+//        memset(&file_chunk, 0, chunk_size);
+
+        // Receiving bytes from the socket.
+        received_size = recv(client_socket, file_chunk, chunk_size, 0);
+        printf("Client: received %i bytes from server.\n", received_size);
+
+        // The server has closed the connection.
+        // Note: the server will only close the connection when the application terminates.
+        if (received_size == 0){
+            close(client_socket);
+            fclose(fptr);
+            break;
+        }
+        // Writing the received bytes into disk.
+        fwrite(&file_chunk, sizeof(char), received_size, fptr);
+//        printf("Client: file_chunk data is:\n%s\n\n", file_chunk);
+    }
+    return 0;
+}
+
 // Sending and receiving multiple messages message.
 int server_process(client_socket, server_socket){
     char buffer[1024];
@@ -37,6 +73,7 @@ int server_process(client_socket, server_socket){
 				if (received_size == 0)
 				{
 					close(client_socket);
+					has_cmd = 0;
 					break;
 				}
 				printf("server: received message: %s\n", buffer);

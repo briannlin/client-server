@@ -4,11 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Client Domain'.
 #define PORT 9999
 #define MAXLINE 500
 #define MAXARGS 3
+
+int start_client(char* user_commands, char* ip_address, int start_process);
+
 
 char** tokenize(char* str)
 {
@@ -30,9 +34,15 @@ char** tokenize(char* str)
     return tokens;
 }
 
-void client_upload(int client_socket, char* filename)
+void client_upload(int client_socket, char* ip_address, char* filename)
 {
 	/* upload a file from the local directory to the remote directory*/
+
+	// Send to server: u {filename} {filesize}
+	/*char server_command[100];
+	strcpy(server_command, "u ");
+	strcat(source_path, filename);
+    printf("Concatenated String: %s\n", source_path);*/
 
 	// Send to server: command code 3
 	char cmd[1];                  // buffer for code & OK
@@ -53,8 +63,16 @@ void client_upload(int client_socket, char* filename)
 
 	sleep(3);
 	close(client_socket);
+
+	start_client("0", ip_address, 0);
+	cmd[0] = 'g';
+	send(client_socket, cmd, 1, 0);        // send code 'u' to server
+	recv(client_socket, cmd, 1, 0);		   // receive OK from server
+	printf("client: received %c\n", cmd[0]);
+
 	exit(0);
 
+	// real code V
 
 	FILE *fptr;
     int chunk_size = 1000;
@@ -100,7 +118,7 @@ void client_upload(int client_socket, char* filename)
     fclose(fptr);
 }
 
-void execute(char* line, int client_socket, int* append_mode)
+void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 {
 	//printf("append_mode: %i\n", *append_mode);
 	if (*append_mode)
@@ -127,7 +145,6 @@ void execute(char* line, int client_socket, int* append_mode)
 			// TODO: append line to file on server
 			printf("appending a line\n");
 		}
-		
 	}
 	else
 	{
@@ -151,7 +168,7 @@ void execute(char* line, int client_socket, int* append_mode)
 		{
 			// TODO: upload local file to server
 			printf("upload : %s\n", args[1]);
-			client_upload(client_socket, args[1]);
+			client_upload(client_socket, ip_address, args[1]);
 		}
 		else if (strcmp(args[0], "download") == 0)
 		{
@@ -182,7 +199,7 @@ void execute(char* line, int client_socket, int* append_mode)
 	}
 }
 
-int client_process(int client_socket, char* user_commands)
+int client_process(int client_socket, char* ip_address, char* user_commands)
 {
 	printf("Welcome to ICS53 Online Cloud Storage.\n");
 	int append_mode = 0;
@@ -213,7 +230,7 @@ int client_process(int client_socket, char* user_commands)
 			{
 				printf("Appending> %s\n", line);
 			}
-			execute(line, client_socket, &append_mode);
+			execute(line, client_socket, ip_address, &append_mode);
 
 			//send(client_socket, line, strlen(line), 0);
 			//sleep(1);
@@ -228,7 +245,7 @@ int client_process(int client_socket, char* user_commands)
 }
 
 
-int start_client(char* user_commands, char* ip_address)
+int start_client(char* user_commands, char* ip_address, int start_process)
 {
     int client_socket;
     struct sockaddr_in serv_addr;
@@ -256,7 +273,10 @@ int start_client(char* user_commands, char* ip_address)
 	printf("client connected to server\n");
 
     ///////////// Start sending and receiving process //////////////
-    client_process(client_socket, user_commands);
+	if (start_process)
+	{
+		client_process(client_socket, ip_address, user_commands);
+	}
     return 0;
 }
 
@@ -270,7 +290,7 @@ int main(int argc, char *argv[])
 	md5_print();
 	printf("-----------\n");
 	
-	start_client(user_commands, ip_address);
+	start_client(user_commands, ip_address, 1);
 
 	return 0;
 }
