@@ -12,15 +12,50 @@
 // Sending and receiving multiple messages message.
 int server_process(client_socket, server_socket){
     char buffer[1024];
+	char cmd[1];
+	char okay[1];
+	int has_cmd = 0;
     while (1){  // We go into an infinite loop because we don't know how many messages we are going to receive.
-        int received_size = recv(client_socket, buffer, 1024, 0);
-        if (received_size == 0){  // Socket is closed by the other end.
-            close(client_socket);
-            //close(server_socket);
-            break;
-        }
-        printf("Received %s from client with size = %i\n", buffer, received_size);
-        bzero(buffer, 1024);
+		if (!has_cmd)
+		{
+			int received_size = recv(client_socket, cmd, 1, 0);
+			if (received_size == 0)
+			{
+				close(client_socket);
+				break;
+			}
+			printf("server: received server code: %c\n", cmd[0]);
+			okay[0] = 'K';
+			send(client_socket, okay, 1, 0);
+			has_cmd = 1;
+		}
+		else
+		{
+			if (cmd[0] == 'u')
+			{
+				int received_size =recv(client_socket, buffer, 1024, 0);
+				if (received_size == 0)
+				{
+					close(client_socket);
+					break;
+				}
+				printf("server: received message: %s\n", buffer);
+				bzero(buffer, 1024);
+				okay[0] = 'K';
+				send(client_socket, okay, 1, 0);
+			}
+		}
+		
+		/*while(1)
+		{
+			printf("before int received_size\n");
+			int received_size = recv(client_socket, buffer, 1024, 0);
+        	if (received_size == 0){  // Socket is closed by the other end.
+            	close(client_socket);
+            	//close(server_socket);
+            	break;
+       		}
+		}*/
     }
     return 0;
 }
