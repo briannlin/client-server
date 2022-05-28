@@ -30,6 +30,76 @@ char** tokenize(char* str)
     return tokens;
 }
 
+void client_upload(int client_socket, char* filename)
+{
+	/* upload a file from the local directory to the remote directory*/
+
+	// Send to server: command code 3
+	char cmd[1];                  // buffer for code & OK
+	cmd[0] = 'u';
+	send(client_socket, cmd, 1, 0);        // send code 'u' to server
+	recv(client_socket, cmd, 1, 0);		   // receive OK from server
+	printf("client: received %c\n", cmd[0]);
+
+	char* message = "amogus";
+	send(client_socket, message, strlen(message), 0);
+	recv(client_socket, cmd, 1, 0);
+	printf("client: received %c\n", cmd[0]);
+
+	char* message1 = "onj";
+	send(client_socket, message1, strlen(message1), 0);
+	recv(client_socket, cmd, 1, 0);
+	printf("client: received %c\n", cmd[0]);
+
+	sleep(3);
+	close(client_socket);
+	exit(0);
+
+
+	FILE *fptr;
+    int chunk_size = 1000;
+    char file_chunk[chunk_size];
+
+	char source_path[100];
+	strcpy(source_path, "./Local Directory/");
+	strcat(source_path, filename);
+    printf("Concatenated String: %s\n", source_path);
+
+    fptr = fopen(source_path,"rb");  // Open a file in read-binary mode.
+	if (!fptr) // If file doesn't exist, say so and return
+    {
+        printf("File [%s] could not be found in local directory.\n", filename);
+        return;
+    }
+
+    /*fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
+    int file_size = ftell(fptr);  // Get file size.
+    printf("Server: file size = %i bytes\n", file_size);
+    fseek(fptr, 0L, SEEK_SET);  // Sets the pointer back to the beginning of the file.
+
+    int total_bytes = 0;  // Keep track of how many bytes we read so far.
+    int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
+    ssize_t sent_bytes;
+
+    while (total_bytes < file_size){
+        // Clean the memory of previous bytes.
+        bzero(file_chunk, chunk_size);
+
+        // Read file bytes from file.
+        current_chunk_size = fread(&file_chunk, sizeof(char), chunk_size, fptr);
+
+        // Sending a chunk of file to the socket.
+        sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
+
+        // Keep track of how many bytes we read/sent so far.
+        total_bytes = total_bytes + sent_bytes;
+
+        printf("Server: sent to client %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);
+
+    }*/
+    fclose(fptr);
+}
+
 void execute(char* line, int client_socket, int* append_mode)
 {
 	//printf("append_mode: %i\n", *append_mode);
@@ -80,7 +150,8 @@ void execute(char* line, int client_socket, int* append_mode)
 		else if (strcmp(args[0], "upload") == 0)
 		{
 			// TODO: upload local file to server
-			printf("upload cmd\n");
+			printf("upload : %s\n", args[1]);
+			client_upload(client_socket, args[1]);
 		}
 		else if (strcmp(args[0], "download") == 0)
 		{
@@ -111,7 +182,7 @@ void execute(char* line, int client_socket, int* append_mode)
 	}
 }
 
-int client_example_loop(int client_socket, char* user_commands)
+int client_process(int client_socket, char* user_commands)
 {
 	printf("Welcome to ICS53 Online Cloud Storage.\n");
 	int append_mode = 0;
@@ -185,7 +256,7 @@ int start_client(char* user_commands, char* ip_address)
 	printf("client connected to server\n");
 
     ///////////// Start sending and receiving process //////////////
-    client_example_loop(client_socket, user_commands);
+    client_process(client_socket, user_commands);
     return 0;
 }
 
