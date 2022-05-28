@@ -1,0 +1,9 @@
+download hello.txt
+upload helo.txt 
+upload hello.txt 
+append hello.txt 
+more hello world 
+pause 1 
+close
+weirdge command
+quit
