@@ -11,6 +11,20 @@
 #define MAXARGS 5
 #define MAXLINE 100
 
+void send_ok(char k, int client_socket)
+{
+	char okay[1];
+	okay[0] = k;
+	send(client_socket, okay, 1, 0);
+}
+
+int receive_ok(int client_socket)
+{
+	char okay[1];
+	recv(client_socket, okay, 1, 0);		   // receive OK from server
+	return okay[0] == 'K';
+}
+
 char** tokenize(char* str)
 {
     int i;
@@ -70,12 +84,66 @@ int receive_upload(int client_socket, char* filename){
     return 0;
 }
 
+void send_download(int client_socket, char* filename)
+{
+	FILE *fptr;
+    int chunk_size = 1000;
+    char file_chunk[chunk_size];
+
+	char source_path[100];
+	strcpy(source_path, "./Remote Directory/");
+	strcat(source_path, filename);
+
+	fptr = fopen(source_path,"rb");  // Open a file in read-binary mode.
+	if (!fptr) // If file doesn't exist, say so and return
+    {
+        printf("File [%s] could not be found in remote directory.\n", filename);
+		send_ok('N', client_socket);
+    }
+	else
+	{
+		send_ok('K', client_socket);
+		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
+		int file_size = ftell(fptr);  // Get file size.
+		fseek(fptr, 0L, SEEK_SET);  // Sets the pointer back to the beginning of the file.
+
+		int total_bytes = 0;  // Keep track of how many bytes we read so far.
+		int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
+		ssize_t sent_bytes;
+
+		while (total_bytes < file_size){
+			// Clean the memory of previous bytes.
+			bzero(file_chunk, chunk_size);
+
+			// Read file bytes from file.
+			current_chunk_size = fread(&file_chunk, sizeof(char), chunk_size, fptr);
+
+			// Sending a chunk of file to the socket.
+			sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
+			receive_ok(client_socket);
+
+			// Keep track of how many bytes we read/sent so far.
+			total_bytes = total_bytes + sent_bytes;
+
+			if (file_size == total_bytes)
+			{
+				send_ok('N', client_socket);
+			}
+			else
+			{
+				send_ok('K', client_socket);
+			}
+		}
+		fclose(fptr);
+		printf("%i bytes uploaded to local successfully.\n", total_bytes);
+	}
+
+}
+
 // Sending and receiving multiple messages message.
 int server_process(client_socket, server_socket){
     char buffer[1024];
-	char okay[1];
-	int cmd = 0;
-	FILE* fptr;
+
     while (1){  // We go into an infinite loop because we don't know how many messages we are going to receive.
 		// If server is not currently handling a client's command, then the next thing 
 		// received must be a new client command, or 0 (socket closed).
@@ -89,20 +157,22 @@ int server_process(client_socket, server_socket){
 		}
 
 		printf("server: received command: %s\n", buffer);
-		okay[0] = 'K';
-		send(client_socket, okay, 1, 0);
-
 		char** tokens = tokenize(buffer);
 		char* command = tokens[0];
 		if (strcmp(command, "upload") == 0)
 		{
-			cmd = 3;
-			printf("filename: %s\n", tokens[1]);
+			send_ok('K', client_socket);
+			char* filename = tokens[1];
+			printf("upload filename: %s\n", filename);
 			receive_upload(client_socket, tokens[1]);
-			cmd = 0;
 		}
-		// FLUSH THE BUFFER? PRINTING "upload me.jpgx" (where x coming from?)
-		bzero(buffer, 1024);
+		else if (strcmp(command, "download") == 0)
+		{
+			char* filename = tokens[1];
+			printf("download filename: %s\n", filename);
+			send_download(client_socket, filename);
+		}
+		//bzero(buffer, 1024);
     }
     return 0;
 }
@@ -146,7 +216,7 @@ int start_server(char* ip_address)
     }
 	while (1)
 	{
-		printf("server listening\n");
+		printf("\nserver listening\n");
 		client_socket = accept(server_socket, (struct sockaddr*)&address, (socklen_t*)&addrlen);
 		if (client_socket < 0) {
 			perror("accept");

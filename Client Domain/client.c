@@ -13,6 +13,19 @@
 
 int start_client(char* user_commands, char* ip_address, int start_process);
 
+int receive_ok(int client_socket)
+{
+	char okay[1];
+	recv(client_socket, okay, 1, 0);		   // receive OK from server
+	return okay[0] == 'K';
+}
+
+void send_ok(char k, int client_socket)
+{
+	char okay[1];
+	okay[0] = k;
+	send(client_socket, okay, 1, 0);
+}
 
 char** tokenize(char* str)
 {
@@ -53,9 +66,10 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 	else
 	{
 		// Send to server: command
-		char okay[1];
+		//char okay[1];
 		send(client_socket, command_line, MAXLINE, 0);        // send command to server
-		recv(client_socket, okay, 1, 0);		   // receive OK from server
+		//recv(client_socket, okay, 1, 0);		   // receive OK from server
+		receive_ok(client_socket);
 
 		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
 		int file_size = ftell(fptr);  // Get file size.
@@ -88,8 +102,59 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 	}
 }
 
-void client_download(client_socket, command_line)
+void client_download(int client_socket, char* command_line, char* filename)
+{
+	send(client_socket, command_line, MAXLINE, 0);        // send command to server
+	if (!receive_ok(client_socket))
+	{
+		printf("File [%s] could not be found in remote directory.\n", filename);
+	}
+	else
+	{
+		int received_size;
+		int total_bytes = 0;  // Keep track of how many bytes we downloaded so far.
 
+		char destination_path[100];
+		strcpy(destination_path, "./Local Directory/");
+		strcat(destination_path, filename);
+
+		int chunk_size = 1000;
+		char file_chunk[chunk_size];
+	//    int chunk_counter = 0;
+
+		FILE *fptr;
+
+		// Opening a new file in write-binary mode to write the received file bytes into the disk using fptr.
+		fptr = fopen(destination_path,"wb");
+
+		// Keep receiving bytes until we receive the whole file.
+		while (1){
+			bzero(file_chunk, chunk_size);
+	//        memset(&file_chunk, 0, chunk_size);
+
+			// Receiving bytes from the socket.
+			received_size = recv(client_socket, file_chunk, chunk_size, 0);
+			total_bytes += received_size;
+			send_ok('K', client_socket);
+
+			// The server has closed the connection.
+			// Note: the server will only close the connection when the application terminates.
+			/*if (received_size == 0){
+				fclose(fptr);
+				break;
+			}*/
+			// Writing the received bytes into disk.
+			fwrite(&file_chunk, sizeof(char), received_size, fptr);
+			
+			if (!receive_ok(client_socket))
+			{
+				fclose(fptr);
+				break;
+			}
+		}
+		printf("%i bytes downloaded successfully.\n", total_bytes);
+	}
+}
 
 void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 {
@@ -146,7 +211,6 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		{
 			// TODO: download server file to local
 			client_download(client_socket, command_line, args[1]);
-			printf("download cmd\n");
 		}
 		else if (strcmp(args[0], "delete") == 0)
 		{
