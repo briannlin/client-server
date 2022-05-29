@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Client Domain'.
 #define PORT 9999
-#define MAXLINE 500
+#define MAXLINE 100
 #define MAXARGS 3
 
 int start_client(char* user_commands, char* ip_address, int start_process);
@@ -34,43 +34,32 @@ char** tokenize(char* str)
     return tokens;
 }
 
-void client_upload(int client_socket, char* ip_address, char* filename)
+void client_upload(int client_socket, char* ip_address, char* command_line, char* filename)
 {
 	/* upload a file from the local directory to the remote directory*/
+	char okay[1];
 
-	// Send to server: u {filename} {filesize}
-	/*char server_command[100];
-	strcpy(server_command, "u ");
-	strcat(source_path, filename);
-    printf("Concatenated String: %s\n", source_path);*/
-
-	// Send to server: command code 3
-	char cmd[1];                  // buffer for code & OK
-	cmd[0] = 'u';
-	send(client_socket, cmd, 1, 0);        // send code 'u' to server
-	recv(client_socket, cmd, 1, 0);		   // receive OK from server
-	printf("client: received %c\n", cmd[0]);
-
-	char* message = "amogus";
+	/*char* message = "amogus";
 	send(client_socket, message, strlen(message), 0);
-	recv(client_socket, cmd, 1, 0);
-	printf("client: received %c\n", cmd[0]);
+	recv(client_socket, okay, 1, 0);
+	printf("client: received %c\n", okay[0]);
 
 	char* message1 = "onj";
 	send(client_socket, message1, strlen(message1), 0);
-	recv(client_socket, cmd, 1, 0);
-	printf("client: received %c\n", cmd[0]);
+	recv(client_socket, okay, 1, 0);
+	printf("client: received %c\n", okay[0]);
 
 	sleep(3);
 	close(client_socket);
 
 	start_client("0", ip_address, 0);
+	char cmd[1];
 	cmd[0] = 'g';
 	send(client_socket, cmd, 1, 0);        // send code 'u' to server
-	recv(client_socket, cmd, 1, 0);		   // receive OK from server
-	printf("client: received %c\n", cmd[0]);
+	recv(client_socket, okay, 1, 0);		   // receive OK from server
+	printf("client: received %c\n", okay[0]);*/
 
-	exit(0);
+	//exit(0);
 
 	// real code V
 
@@ -87,35 +76,45 @@ void client_upload(int client_socket, char* ip_address, char* filename)
 	if (!fptr) // If file doesn't exist, say so and return
     {
         printf("File [%s] could not be found in local directory.\n", filename);
-        return;
     }
+	else
+	{
+		// Send to server: command
+		printf("sending to server command: %s\n", command_line);
+		send(client_socket, command_line, MAXLINE, 0);        // send command to server
+		recv(client_socket, okay, 1, 0);		   // receive OK from server
+		printf("client: received %c\n", okay[0]);
 
-    /*fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
-    int file_size = ftell(fptr);  // Get file size.
-    printf("Server: file size = %i bytes\n", file_size);
-    fseek(fptr, 0L, SEEK_SET);  // Sets the pointer back to the beginning of the file.
+		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
+		int file_size = ftell(fptr);  // Get file size.
+		printf("Server: file size = %i bytes\n", file_size);
+		fseek(fptr, 0L, SEEK_SET);  // Sets the pointer back to the beginning of the file.
 
-    int total_bytes = 0;  // Keep track of how many bytes we read so far.
-    int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
-    ssize_t sent_bytes;
+		int total_bytes = 0;  // Keep track of how many bytes we read so far.
+		int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
+		ssize_t sent_bytes;
 
-    while (total_bytes < file_size){
-        // Clean the memory of previous bytes.
-        bzero(file_chunk, chunk_size);
+		while (total_bytes < file_size){
+			// Clean the memory of previous bytes.
+			bzero(file_chunk, chunk_size);
 
-        // Read file bytes from file.
-        current_chunk_size = fread(&file_chunk, sizeof(char), chunk_size, fptr);
+			// Read file bytes from file.
+			current_chunk_size = fread(&file_chunk, sizeof(char), chunk_size, fptr);
 
-        // Sending a chunk of file to the socket.
-        sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
+			// Sending a chunk of file to the socket.
+			sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
 
-        // Keep track of how many bytes we read/sent so far.
-        total_bytes = total_bytes + sent_bytes;
+			// Keep track of how many bytes we read/sent so far.
+			total_bytes = total_bytes + sent_bytes;
 
-        printf("Server: sent to client %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);
+			/*printf("Client: sent to server %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);*/
 
-    }*/
-    fclose(fptr);
+		}
+		fclose(fptr);
+		close(client_socket);
+		start_client("0", ip_address, 0);
+	}
+	bzero(filename, 100);
 }
 
 void execute(char* line, int client_socket, char* ip_address, int* append_mode)
@@ -168,7 +167,8 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		{
 			// TODO: upload local file to server
 			printf("upload : %s\n", args[1]);
-			client_upload(client_socket, ip_address, args[1]);
+			printf("before entering client upload, command_line: %s\n", command_line);
+			client_upload(client_socket, ip_address, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "download") == 0)
 		{
@@ -195,6 +195,7 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 			// TODO: weird command
 			printf("Command [%s] is not recognized.\n", command_line);
 		}
+		bzero(command_line, 100);
 		free(command_line);
 	}
 }

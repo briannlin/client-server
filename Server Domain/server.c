@@ -8,11 +8,39 @@
 #include <unistd.h>
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Server Domain'.
 #define PORT 9999
+#define MAXARGS 5
+#define MAXLINE 100
+
+char** tokenize(char* str)
+{
+    int i;
+    static char *tokens[MAXARGS];
+    for (i = 0; i < MAXARGS; i++)
+    {
+        tokens[i] = NULL;
+    }
+
+    i = 0;
+    char* token = strtok(str, " \t");
+    while (token != NULL)
+    {
+        tokens[i] = token;
+        token = strtok(NULL, " \t");
+        i += 1;
+    }
+    return tokens;
+}
+
+
 
 // Sending and receiving an entire file.
-int receive_upload(client_socket){
+int receive_upload(int client_socket, char* filename){
     int received_size;
-    char destination_path[] = "./Local Directory/received_file.jpg";  // Note how we don't have the original file name.
+
+	char destination_path[100];
+	strcpy(destination_path, "./Remote Directory/");
+	strcat(destination_path, filename);
+	
     int chunk_size = 1000;
     char file_chunk[chunk_size];
 //    int chunk_counter = 0;
@@ -29,12 +57,11 @@ int receive_upload(client_socket){
 
         // Receiving bytes from the socket.
         received_size = recv(client_socket, file_chunk, chunk_size, 0);
-        printf("Client: received %i bytes from server.\n", received_size);
+        /*printf("Client: received %i bytes from server.\n", received_size);*/
 
         // The server has closed the connection.
         // Note: the server will only close the connection when the application terminates.
         if (received_size == 0){
-            close(client_socket);
             fclose(fptr);
             break;
         }
@@ -48,32 +75,61 @@ int receive_upload(client_socket){
 // Sending and receiving multiple messages message.
 int server_process(client_socket, server_socket){
     char buffer[1024];
-	char cmd[1];
 	char okay[1];
-	int has_cmd = 0;
+	int cmd = 0;
+	FILE* fptr;
     while (1){  // We go into an infinite loop because we don't know how many messages we are going to receive.
-		if (!has_cmd)
+		if (!cmd)
 		{
-			int received_size = recv(client_socket, cmd, 1, 0);
+			// If server is not currently handling a client's command, then the next thing 
+			// received must be a new client command, or 0 (socket closed).
+			printf("BEFORE RECEIVE: %s\n", buffer);
+			int received_size = recv(client_socket, buffer, 1024, 0);
 			if (received_size == 0)
 			{
+				// TODO: Client closes connection entirely (quit cmd). free thread or smt?
+				// TODO: flush buffer, okay, filepath
 				close(client_socket);
 				break;
 			}
-			printf("server: received server code: %c\n", cmd[0]);
+
+			printf("server: received command: %s\n", buffer);
 			okay[0] = 'K';
 			send(client_socket, okay, 1, 0);
-			has_cmd = 1;
+
+			char** tokens = tokenize(buffer);
+			char* command = tokens[0];
+			if (strcmp(command, "upload") == 0)
+			{
+				cmd = 3;
+				printf("filename: %s\n", tokens[1]);
+				receive_upload(client_socket, tokens[1]);
+				cmd = 0;
+				/*char* filename = tokens[1];
+				char destination_path[100];
+				strcpy(destination_path, "./Remote Directory/");
+				strcat(destination_path, filename);
+				fptr = fopen(destination_path,"wb");*/
+			}
+			// FLUSH THE BUFFER? PRINTING "upload me.jpgx" (where x coming from?)
+			bzero(buffer, 1024);
+		}
+			/*bzero(buffer, 1024);
+			okay[0] = 'K';
+			send(client_socket, okay, 1, 0);
 		}
 		else
 		{
-			if (cmd[0] == 'u')
+			if (cmd == 3)
 			{
-				int received_size =recv(client_socket, buffer, 1024, 0);
+				// Upload: Server will receive chunks of bytes from the client
+				int received_size = recv(client_socket, buffer, 1024, 0);
 				if (received_size == 0)
 				{
 					close(client_socket);
-					has_cmd = 0;
+					fclose(fptr);
+					cmd = 0;
+					// TODO: flush buffer, okay, filepath
 					break;
 				}
 				printf("server: received message: %s\n", buffer);
@@ -81,7 +137,7 @@ int server_process(client_socket, server_socket){
 				okay[0] = 'K';
 				send(client_socket, okay, 1, 0);
 			}
-		}
+		}*/
 		
 		/*while(1)
 		{

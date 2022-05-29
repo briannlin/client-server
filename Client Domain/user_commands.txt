@@ -1,4 +1,6 @@
 upload hello.txt
+upload helo.txt
+upload me.jpg
 quit
 
 download hello.txt
