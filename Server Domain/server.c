@@ -31,8 +31,6 @@ char** tokenize(char* str)
     return tokens;
 }
 
-
-
 // Sending and receiving an entire file.
 int receive_upload(int client_socket, char* filename){
     int received_size;
