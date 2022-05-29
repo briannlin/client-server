@@ -140,6 +140,24 @@ void send_download(int client_socket, char* filename)
 
 }
 
+void delete_file(int client_socket, char* filename)
+{
+	char source_path[100];
+	strcpy(source_path, "./Remote Directory/");
+	strcat(source_path, filename);
+
+	if (remove(source_path) == 0)
+	{
+    	printf("Deleted successfully:%s\n", filename);
+		send_ok('K', client_socket);
+	}
+	else
+	{
+    	printf("Unable to delete the file / File DNE: %s\n", filename);
+		send_ok('N', client_socket);
+	}
+}
+
 // Sending and receiving multiple messages message.
 int server_process(client_socket, server_socket){
     char buffer[1024];
@@ -164,7 +182,7 @@ int server_process(client_socket, server_socket){
 			send_ok('K', client_socket);
 			char* filename = tokens[1];
 			printf("upload filename: %s\n", filename);
-			receive_upload(client_socket, tokens[1]);
+			receive_upload(client_socket, filename);
 		}
 		else if (strcmp(command, "download") == 0)
 		{
@@ -172,7 +190,12 @@ int server_process(client_socket, server_socket){
 			printf("download filename: %s\n", filename);
 			send_download(client_socket, filename);
 		}
-		//bzero(buffer, 1024);
+		else if (strcmp(command, "delete") == 0)
+		{
+			char* filename = tokens[1];
+			printf("delete filename: %s\n", filename);
+			delete_file(client_socket, filename);
+		}
     }
     return 0;
 }

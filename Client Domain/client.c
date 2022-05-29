@@ -156,6 +156,19 @@ void client_download(int client_socket, char* command_line, char* filename)
 	}
 }
 
+void client_delete(int client_socket, char* command_line, char* filename)
+{
+	send(client_socket, command_line, MAXLINE, 0);        // send command to server
+	if (!receive_ok(client_socket))
+	{
+		printf("File [%s] could not be found in remote directory.\n", filename);
+	}
+	else
+	{
+		printf("File deleted successfully.\n");
+	}
+}
+
 void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 {
 	//printf("append_mode: %i\n", *append_mode);
@@ -215,7 +228,7 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		else if (strcmp(args[0], "delete") == 0)
 		{
 			// TODO: delete server file
-			printf("delete cmd\n");
+			client_delete(client_socket, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "syncheck") == 0)
 		{

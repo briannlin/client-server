@@ -1,6 +1,13 @@
+delete helo.txt
+delete hello.txt
+pause 1
+upload hello.txt
+quit
+
 upload hello.txt
 upload helo.txt
 upload me.jpg
+download not_here.txt
 download jjk.png
 quit
 
