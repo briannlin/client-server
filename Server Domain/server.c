@@ -77,76 +77,32 @@ int server_process(client_socket, server_socket){
 	int cmd = 0;
 	FILE* fptr;
     while (1){  // We go into an infinite loop because we don't know how many messages we are going to receive.
-		if (!cmd)
+		// If server is not currently handling a client's command, then the next thing 
+		// received must be a new client command, or 0 (socket closed).
+		int received_size = recv(client_socket, buffer, 1024, 0);
+		if (received_size == 0)
 		{
-			// If server is not currently handling a client's command, then the next thing 
-			// received must be a new client command, or 0 (socket closed).
-			printf("BEFORE RECEIVE: %s\n", buffer);
-			int received_size = recv(client_socket, buffer, 1024, 0);
-			if (received_size == 0)
-			{
-				// TODO: Client closes connection entirely (quit cmd). free thread or smt?
-				// TODO: flush buffer, okay, filepath
-				close(client_socket);
-				break;
-			}
-
-			printf("server: received command: %s\n", buffer);
-			okay[0] = 'K';
-			send(client_socket, okay, 1, 0);
-
-			char** tokens = tokenize(buffer);
-			char* command = tokens[0];
-			if (strcmp(command, "upload") == 0)
-			{
-				cmd = 3;
-				printf("filename: %s\n", tokens[1]);
-				receive_upload(client_socket, tokens[1]);
-				cmd = 0;
-				/*char* filename = tokens[1];
-				char destination_path[100];
-				strcpy(destination_path, "./Remote Directory/");
-				strcat(destination_path, filename);
-				fptr = fopen(destination_path,"wb");*/
-			}
-			// FLUSH THE BUFFER? PRINTING "upload me.jpgx" (where x coming from?)
-			bzero(buffer, 1024);
+			// TODO: Client closes connection entirely (quit cmd). free thread or smt?
+			// TODO: flush buffer, okay, filepath
+			close(client_socket);
+			break;
 		}
-			/*bzero(buffer, 1024);
-			okay[0] = 'K';
-			send(client_socket, okay, 1, 0);
+
+		printf("server: received command: %s\n", buffer);
+		okay[0] = 'K';
+		send(client_socket, okay, 1, 0);
+
+		char** tokens = tokenize(buffer);
+		char* command = tokens[0];
+		if (strcmp(command, "upload") == 0)
+		{
+			cmd = 3;
+			printf("filename: %s\n", tokens[1]);
+			receive_upload(client_socket, tokens[1]);
+			cmd = 0;
 		}
-		else
-		{
-			if (cmd == 3)
-			{
-				// Upload: Server will receive chunks of bytes from the client
-				int received_size = recv(client_socket, buffer, 1024, 0);
-				if (received_size == 0)
-				{
-					close(client_socket);
-					fclose(fptr);
-					cmd = 0;
-					// TODO: flush buffer, okay, filepath
-					break;
-				}
-				printf("server: received message: %s\n", buffer);
-				bzero(buffer, 1024);
-				okay[0] = 'K';
-				send(client_socket, okay, 1, 0);
-			}
-		}*/
-		
-		/*while(1)
-		{
-			printf("before int received_size\n");
-			int received_size = recv(client_socket, buffer, 1024, 0);
-        	if (received_size == 0){  // Socket is closed by the other end.
-            	close(client_socket);
-            	//close(server_socket);
-            	break;
-       		}
-		}*/
+		// FLUSH THE BUFFER? PRINTING "upload me.jpgx" (where x coming from?)
+		bzero(buffer, 1024);
     }
     return 0;
 }

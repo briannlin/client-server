@@ -37,32 +37,6 @@ char** tokenize(char* str)
 void client_upload(int client_socket, char* ip_address, char* command_line, char* filename)
 {
 	/* upload a file from the local directory to the remote directory*/
-	char okay[1];
-
-	/*char* message = "amogus";
-	send(client_socket, message, strlen(message), 0);
-	recv(client_socket, okay, 1, 0);
-	printf("client: received %c\n", okay[0]);
-
-	char* message1 = "onj";
-	send(client_socket, message1, strlen(message1), 0);
-	recv(client_socket, okay, 1, 0);
-	printf("client: received %c\n", okay[0]);
-
-	sleep(3);
-	close(client_socket);
-
-	start_client("0", ip_address, 0);
-	char cmd[1];
-	cmd[0] = 'g';
-	send(client_socket, cmd, 1, 0);        // send code 'u' to server
-	recv(client_socket, okay, 1, 0);		   // receive OK from server
-	printf("client: received %c\n", okay[0]);*/
-
-	//exit(0);
-
-	// real code V
-
 	FILE *fptr;
     int chunk_size = 1000;
     char file_chunk[chunk_size];
@@ -70,7 +44,6 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 	char source_path[100];
 	strcpy(source_path, "./Local Directory/");
 	strcat(source_path, filename);
-    printf("Concatenated String: %s\n", source_path);
 
     fptr = fopen(source_path,"rb");  // Open a file in read-binary mode.
 	if (!fptr) // If file doesn't exist, say so and return
@@ -80,14 +53,12 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 	else
 	{
 		// Send to server: command
-		printf("sending to server command: %s\n", command_line);
+		char okay[1];
 		send(client_socket, command_line, MAXLINE, 0);        // send command to server
 		recv(client_socket, okay, 1, 0);		   // receive OK from server
-		printf("client: received %c\n", okay[0]);
 
 		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
 		int file_size = ftell(fptr);  // Get file size.
-		printf("Server: file size = %i bytes\n", file_size);
 		fseek(fptr, 0L, SEEK_SET);  // Sets the pointer back to the beginning of the file.
 
 		int total_bytes = 0;  // Keep track of how many bytes we read so far.
@@ -111,11 +82,14 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 
 		}
 		fclose(fptr);
+		printf("%i bytes uploaded successfully.\n", total_bytes);
 		close(client_socket);
 		start_client("0", ip_address, 0);
 	}
-	bzero(filename, 100);
 }
+
+void client_download(client_socket, command_line)
+
 
 void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 {
@@ -166,13 +140,12 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		else if (strcmp(args[0], "upload") == 0)
 		{
 			// TODO: upload local file to server
-			printf("upload : %s\n", args[1]);
-			printf("before entering client upload, command_line: %s\n", command_line);
 			client_upload(client_socket, ip_address, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "download") == 0)
 		{
 			// TODO: download server file to local
+			client_download(client_socket, command_line, args[1]);
 			printf("download cmd\n");
 		}
 		else if (strcmp(args[0], "delete") == 0)
