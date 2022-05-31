@@ -249,22 +249,45 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 		recv(client_socket, remote_filesize_buf, 15, 0);	// Receive file size of remote file
 		send_ok('K', client_socket);
 
+		// TODO: Checksum
+		// Receive md5 of file on the server
+		char remote_md5_buf[17];
+		recv(client_socket, remote_md5_buf, 17, 0);
+		send_ok('K', client_socket);
+
+		// TODO: receive lock status of the file from the server (mutex)
+
 		if (stat(source_path, &stats) != 0) 	// File ONLY exists on remote.
 		{
 			printf("Sync Check Report:\n");
 			printf("- Remote Directory:\n");
 			printf("-- File Size: %s bytes.\n", remote_filesize_buf);
-			printf("-- Sync Status: PLACEHOLDER [implement checksum].\n");
+			printf("-- Sync Status: unsynced.\n");
 			printf("-- Lock Status: PLACEHOLDER [implement threading+file_mutexs].\n");
 		}
 		else		// File exists on BOTH remote and local.
 		{
+			// Get Md5 hash of local file, compare local and server md5 hashes
+			char local_md5_buf[17];
+			MDFile(source_path, local_md5_buf);
+			local_md5_buf[16] = 0; 
+
+			char* sync_status;
+			if (strcmp(local_md5_buf, remote_md5_buf) == 0)
+			{
+				sync_status = "synced";
+			}
+			else
+			{
+				sync_status = "unsynced";
+			}
+
 			printf("Sync Check Report:\n");
 			printf("- Local Directory:\n");
 			printf("-- File Size: %i bytes.\n", (int)stats.st_size);
 			printf("- Remote Directory:\n");
 			printf("-- File Size: %s bytes.\n", remote_filesize_buf);
-			printf("-- Sync Status: PLACEHOLDER [implement checksum].\n");
+			printf("-- Sync Status: %s.\n", sync_status);
 			printf("-- Lock Status: PLACEHOLDER [implement threading+file_mutexs].\n");
 		}
 	}

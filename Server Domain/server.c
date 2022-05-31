@@ -225,6 +225,13 @@ void server_syncheck(int client_socket, char* filename)
 		sprintf(filesize_buf, "%i", filesize);
 		send(client_socket, filesize_buf, 15, 0);		// Send size of remote file
 		receive_ok(client_socket);
+
+		char md5_buf[17];
+		MDFile(source_path, md5_buf);
+		md5_buf[16] = 0;
+		printf("sending md5 %s\n", md5_buf);
+		send(client_socket, md5_buf, 17, 0);
+		receive_ok(client_socket);
 	}
 }
 
@@ -346,9 +353,7 @@ int main(int argc, char *argv[])
 	char* ip_address = argv[1];
 	printf("I am the server.\n");
 	printf("Server IP address: %s\n", ip_address); // TODO: read ip addr from cmdline
-	md5_print();
 	printf("-----------\n");
-	
 	start_server(ip_address);
 
 	return 0;
