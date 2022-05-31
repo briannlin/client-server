@@ -200,6 +200,10 @@ void append_to_file(int client_socket, char* filename)
 	}
 }
 
+void server_syncheck(int client_socket, char* filename)
+{
+
+}
 
 
 // Sending and receiving multiple messages message.
@@ -247,6 +251,12 @@ int server_process(client_socket, server_socket){
 			char* filename = tokens[1];
 			printf("append filename: %s\n", filename);
 			append_to_file(client_socket, filename);
+		}
+		else if (strcmp(command, "syncheck") == 0)
+		{
+			char* filename = tokens[1];
+			printf("syncheck filename: %s\n", filename);
+			server_syncheck(client_socket, filename);
 		}
     }
     return 0;

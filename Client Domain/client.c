@@ -212,6 +212,11 @@ void client_append(int client_socket, char* command_line, char* filename, int* a
 	}
 }
 
+void client_syncheck(int client_socket, char* command_line, char* filename)
+{
+	send(client_socket, command_line, MAXLINE, 0);        // send command to server
+}
+
 void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 {
 	//printf("append_mode: %i\n", *append_mode);
@@ -256,6 +261,7 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		{
 			// TODO: something
 			printf("syncheck cmd\n");
+			client_syncheck(client_socket, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "quit") == 0)
 		{
@@ -360,9 +366,8 @@ int main(int argc, char *argv[])
 	printf("I am the client.\n");
 	printf("Input file name: %s\n", argv[1]);
 	printf("My server IP address: %s\n", argv[2]);
-	md5_print();
 	printf("-----------\n");
-	
+
 	start_client(user_commands, ip_address, 1);
 
 	return 0;

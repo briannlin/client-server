@@ -1,0 +1,5 @@
+Hello world!
+append bait.txt
+more hello
+append bait.txt
+more hello
