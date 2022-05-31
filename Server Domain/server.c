@@ -8,10 +8,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <pthread.h>
+#include <semaphore.h>
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Server Domain'.
 #define PORT 9999
 #define MAXARGS 5
 #define MAXLINE 100
+
+pthread_t client_threads[100];
 
 void send_ok(char k, int client_socket)
 {
@@ -237,10 +241,9 @@ void server_syncheck(int client_socket, char* filename)
 
 
 // Sending and receiving multiple messages message.
-int server_process(client_socket, server_socket){
+void* server_process(void* vargp){
+	int client_socket = (int)vargp;
     char buffer[1024];
-	int a = 0;
-	int* append_mode = &a;
 
     while (1){  // We go into an infinite loop because we don't know how many messages we are going to receive.
 		// If server is not currently handling a client's command, then the next thing 
@@ -251,6 +254,7 @@ int server_process(client_socket, server_socket){
 			// TODO: Client closes connection entirely (quit cmd). free thread or smt?
 			// TODO: flush buffer, okay, filepath
 			close(client_socket);
+			pthread_exit(NULL);
 			break;
 		}
 
@@ -289,7 +293,6 @@ int server_process(client_socket, server_socket){
 			server_syncheck(client_socket, filename);
 		}
     }
-    return 0;
 }
 
 int start_server(char* ip_address)
@@ -329,18 +332,29 @@ int start_server(char* ip_address)
         perror("listen");
         exit(EXIT_FAILURE);
     }
+
+	int i = 0;
 	while (1)
 	{
-		printf("\nserver listening\n");
+		printf("\nserver waiting to accept\n");
 		client_socket = accept(server_socket, (struct sockaddr*)&address, (socklen_t*)&addrlen);
 		if (client_socket < 0) {
 			perror("accept");
 			exit(EXIT_FAILURE);
 		}
-		printf("server accepted client\n");
+
+		if (pthread_create(&client_threads[i++], NULL, server_process, (void *)client_socket) != 0)
+		{
+			// Error in creating thread
+            printf("Failed to create thread\n");
+		}
+		else
+		{
+			printf("server accepted client and created thread\n");
+		}
 
 		///////////// Start sending and receiving process //////////////
-		server_process(client_socket, server_socket);
+		//server_process(client_socket);
 	}
 	// TODO: CLOSE SOCKETS WHEN CTRL C - SIGINT?
     return 0;

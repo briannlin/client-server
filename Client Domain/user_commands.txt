@@ -1,3 +1,8 @@
+append hello.txt
+pause 10
+close
+quit
+
 syncheck dne.jpg
 syncheck me.jpg
 syncheck hello.txt

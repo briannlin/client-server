@@ -187,13 +187,11 @@ void client_append(int client_socket, char* command_line, char* filename, int* a
 		}
 		else if (strcmp(append_cmd, "close") == 0)
 		{
-			// TODO: send close cmd to server to let it know to close file and stop append mode
 			send(client_socket, command_line, MAXLINE, 0);
 			*append_mode = 0;
 		}
 		else
 		{
-			// TODO: append line to file on server
 			send(client_socket, command_line, MAXLINE, 0);
 		}	
 	}
@@ -249,7 +247,6 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 		recv(client_socket, remote_filesize_buf, 15, 0);	// Receive file size of remote file
 		send_ok('K', client_socket);
 
-		// TODO: Checksum
 		// Receive md5 of file on the server
 		char remote_md5_buf[17];
 		recv(client_socket, remote_md5_buf, 17, 0);
@@ -314,28 +311,22 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		}
 		else if (strcmp(args[0], "append") == 0)
 		{
-			// TODO: probably open up file on server end
 			client_append(client_socket, command_line, args[1], append_mode);
-			//*append_mode = 1;
 		}
 		else if (strcmp(args[0], "upload") == 0)
 		{
-			// TODO: upload local file to server
 			client_upload(client_socket, ip_address, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "download") == 0)
 		{
-			// TODO: download server file to local
 			client_download(client_socket, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "delete") == 0)
 		{
-			// TODO: delete server file
 			client_delete(client_socket, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "syncheck") == 0)
 		{
-			// TODO: something
 			client_syncheck(client_socket, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "quit") == 0)
@@ -345,7 +336,6 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		}
 		else
 		{
-			// TODO: weird command
 			printf("Command [%s] is not recognized.\n", command_line);
 		}
 		bzero(command_line, 100);
@@ -375,7 +365,7 @@ int client_process(int client_socket, char* ip_address, char* user_commands)
 			// Strip newline from command
 			line[strcspn(line, "\n")] = '\0';
 
-			/* Print each command/line 		TODO: when in append mode, prints Appending> */ 
+			/* Print each command/line 		TODO: don't print input command on line */ 
 			if (append_mode == 0)
 			{
 				printf("> %s\n", line);
