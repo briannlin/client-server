@@ -212,12 +212,19 @@ void server_syncheck(int client_socket, char* filename)
     {
         printf("File [%s] could not be found in remote directory.\n", filename);
 		send_ok('N', client_socket);
+		receive_ok(client_socket);
     }
 	else
 	{
-		printf("file found on remote");
-		printf("\nFile size: %lld", stats.st_size);
 		send_ok('K', client_socket);
+		receive_ok(client_socket);
+
+		int filesize = stats.st_size;
+		printf("File size: %i\n", (int)filesize);
+		char filesize_buf[15];
+		sprintf(filesize_buf, "%i", filesize);
+		send(client_socket, filesize_buf, 15, 0);		// Send size of remote file
+		receive_ok(client_socket);
 	}
 }
 

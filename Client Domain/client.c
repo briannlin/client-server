@@ -218,7 +218,9 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 	send(client_socket, command_line, MAXLINE, 0);        // send command to server
 
 	if (!receive_ok(client_socket)) 	// File doesn't exist on remote directory.
-	{		
+	{	
+		send_ok('K', client_socket);
+
 		char source_path[100];
 		strcpy(source_path, "./Local Directory/");
 		strcat(source_path, filename);
@@ -231,13 +233,40 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 		{
 			int filesize = stats.st_size;
 			printf("Sync Check Report:\n");
-			printf("Local Directory:\n");
+			printf("- Local Directory:\n");
 			printf("-- File Size: %i bytes.\n", filesize);
 		}
 	}
 	else	// File exists on remote.
-	{
-		printf("file found on remote\n");
+	{	
+		send_ok('K', client_socket);
+
+		char source_path[100];
+		strcpy(source_path, "./Local Directory/");
+		strcat(source_path, filename);
+
+		char remote_filesize_buf[15]; 
+		recv(client_socket, remote_filesize_buf, 15, 0);	// Receive file size of remote file
+		send_ok('K', client_socket);
+
+		if (stat(source_path, &stats) != 0) 	// File ONLY exists on remote.
+		{
+			printf("Sync Check Report:\n");
+			printf("- Remote Directory:\n");
+			printf("-- File Size: %s bytes.\n", remote_filesize_buf);
+			printf("-- Sync Status: PLACEHOLDER [implement checksum].\n");
+			printf("-- Lock Status: PLACEHOLDER [implement threading+file_mutexs].\n");
+		}
+		else		// File exists on BOTH remote and local.
+		{
+			printf("Sync Check Report:\n");
+			printf("- Local Directory:\n");
+			printf("-- File Size: %i bytes.\n", (int)stats.st_size);
+			printf("- Remote Directory:\n");
+			printf("-- File Size: %s bytes.\n", remote_filesize_buf);
+			printf("-- Sync Status: PLACEHOLDER [implement checksum].\n");
+			printf("-- Lock Status: PLACEHOLDER [implement threading+file_mutexs].\n");
+		}
 	}
 }
 

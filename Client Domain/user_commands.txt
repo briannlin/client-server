@@ -1,6 +1,8 @@
 syncheck dne.jpg
 syncheck me.jpg
 syncheck hello.txt
+syncheck bye.txt
+syncheck jjk.png
 quit
 
 upload hello.txt
