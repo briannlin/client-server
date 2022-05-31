@@ -1,7 +1,26 @@
-delete helo.txt
-delete hello.txt
-pause 1
 upload hello.txt
+upload not_hello.txt
+pause 1
+append not_hello.txt
+append hello.txt
+append bait.txt
+more hello
+close
+download jjk.png
+download hello.txt
+upload me.jpg
+append bye.txt
+more bye
+close
+quit
+
+append not_hello.txt
+append hello.txt
+more hello world
+append this should be a line append
+pause 3
+close
+
 quit
 
 upload hello.txt

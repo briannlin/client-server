@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Server Domain'.
 #define PORT 9999
 #define MAXARGS 5
@@ -87,8 +88,6 @@ int receive_upload(int client_socket, char* filename){
 void send_download(int client_socket, char* filename)
 {
 	FILE *fptr;
-    int chunk_size = 1000;
-    char file_chunk[chunk_size];
 
 	char source_path[100];
 	strcpy(source_path, "./Remote Directory/");
@@ -102,6 +101,9 @@ void send_download(int client_socket, char* filename)
     }
 	else
 	{
+		int chunk_size = 1000;
+		char file_chunk[chunk_size];
+
 		send_ok('K', client_socket);
 		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
 		int file_size = ftell(fptr);  // Get file size.
@@ -158,9 +160,53 @@ void delete_file(int client_socket, char* filename)
 	}
 }
 
+void append_to_file(int client_socket, char* filename)
+{
+
+	// Try and open file: if successful, then change into append mode (loop). 
+	// If not successful (file DNE), return N to client
+	char destination_path[100];
+	strcpy(destination_path, "./Remote Directory/");
+	strcat(destination_path, filename);
+
+	int fd;
+	FILE *fptr;
+	fd = open(destination_path, O_APPEND);
+	if (fd < 0) 
+	{
+		printf("File [%s] could not be found in remote directory.\n", filename);
+		send_ok('N', client_socket);
+	}
+	else
+	{
+		fptr = fopen(destination_path, "ab");
+		send_ok('K', client_socket);
+		char line_buf[MAXLINE];
+		while (1)
+		{
+			recv(client_socket, line_buf, MAXLINE, 0);
+			if (strcmp(line_buf, "close") == 0)
+			{
+				printf("Closing file %s\n", filename);
+				fclose(fptr);
+				break;
+			}
+			else
+			{
+				printf("Appending \"%s\" to %s\n", line_buf, filename);
+				fprintf(fptr, "%s\n", line_buf);
+			}
+		}
+	}
+}
+
+
+
 // Sending and receiving multiple messages message.
 int server_process(client_socket, server_socket){
     char buffer[1024];
+	int a = 0;
+	int* append_mode = &a;
 
     while (1){  // We go into an infinite loop because we don't know how many messages we are going to receive.
 		// If server is not currently handling a client's command, then the next thing 
@@ -174,7 +220,7 @@ int server_process(client_socket, server_socket){
 			break;
 		}
 
-		printf("server: received command: %s\n", buffer);
+		printf(">server: received command: %s\n", buffer);
 		char** tokens = tokenize(buffer);
 		char* command = tokens[0];
 		if (strcmp(command, "upload") == 0)
@@ -195,6 +241,12 @@ int server_process(client_socket, server_socket){
 			char* filename = tokens[1];
 			printf("delete filename: %s\n", filename);
 			delete_file(client_socket, filename);
+		}
+		else if (strcmp(command, "append") == 0)
+		{
+			char* filename = tokens[1];
+			printf("append filename: %s\n", filename);
+			append_to_file(client_socket, filename);
 		}
     }
     return 0;
