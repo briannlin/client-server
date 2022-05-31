@@ -214,7 +214,31 @@ void client_append(int client_socket, char* command_line, char* filename, int* a
 
 void client_syncheck(int client_socket, char* command_line, char* filename)
 {
+	struct stat stats;
 	send(client_socket, command_line, MAXLINE, 0);        // send command to server
+
+	if (!receive_ok(client_socket)) 	// File doesn't exist on remote directory.
+	{		
+		char source_path[100];
+		strcpy(source_path, "./Local Directory/");
+		strcat(source_path, filename);
+
+		if (stat(source_path, &stats) != 0) 	// File doesn't exist on local either.
+		{
+			printf("File [%s] could not be found in local or remote directory.\n", filename);
+		}
+		else		// File exists only on local.
+		{
+			int filesize = stats.st_size;
+			printf("Sync Check Report:\n");
+			printf("Local Directory:\n");
+			printf("-- File Size: %i bytes.\n", filesize);
+		}
+	}
+	else	// File exists on remote.
+	{
+		printf("file found on remote\n");
+	}
 }
 
 void execute(char* line, int client_socket, char* ip_address, int* append_mode)
@@ -260,7 +284,6 @@ void execute(char* line, int client_socket, char* ip_address, int* append_mode)
 		else if (strcmp(args[0], "syncheck") == 0)
 		{
 			// TODO: something
-			printf("syncheck cmd\n");
 			client_syncheck(client_socket, command_line, args[1]);
 		}
 		else if (strcmp(args[0], "quit") == 0)

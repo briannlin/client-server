@@ -1,3 +1,8 @@
+syncheck dne.jpg
+syncheck me.jpg
+syncheck hello.txt
+quit
+
 upload hello.txt
 upload not_hello.txt
 pause 1
@@ -12,22 +17,6 @@ upload me.jpg
 append bye.txt
 more bye
 close
-quit
-
-append not_hello.txt
-append hello.txt
-more hello world
-append this should be a line append
-pause 3
-close
-
-quit
-
-upload hello.txt
-upload helo.txt
-upload me.jpg
-download not_here.txt
-download jjk.png
 quit
 
 download hello.txt

@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include "Md5.c"  // Feel free to include any other .c files that you need in the 'Server Domain'.
 #define PORT 9999
 #define MAXARGS 5
@@ -202,7 +203,22 @@ void append_to_file(int client_socket, char* filename)
 
 void server_syncheck(int client_socket, char* filename)
 {
+	char source_path[100];
+	strcpy(source_path, "./Remote Directory/");
+	strcat(source_path, filename);
 
+	struct stat stats;	
+	if (stat(source_path, &stats) != 0) // File doesn't exist.
+    {
+        printf("File [%s] could not be found in remote directory.\n", filename);
+		send_ok('N', client_socket);
+    }
+	else
+	{
+		printf("file found on remote");
+		printf("\nFile size: %lld", stats.st_size);
+		send_ok('K', client_socket);
+	}
 }
 
 
