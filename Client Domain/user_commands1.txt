@@ -1,6 +1,9 @@
+download hello.txt
+upload helo.txt
+upload hello.txt
 append hello.txt
 more hello world
-pause 10
+pause 2
 close
 quit
 

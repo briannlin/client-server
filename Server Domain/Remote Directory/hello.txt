@@ -1,8 +1,2 @@
-Hello from remote!
-more hello world
-more hello world
-more hello world
-more hello world
-more hello world
-more hello world
+hello world
 more hello world

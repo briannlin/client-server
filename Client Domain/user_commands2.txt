@@ -1,4 +1,6 @@
-delete hello.txt
-pause 10
-delete hello.txt
+download hello.txt
+syncheck hello.txt
+pause 2
+download hello.txt
+close
 quit

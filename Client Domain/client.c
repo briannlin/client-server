@@ -141,7 +141,6 @@ void client_download(int client_socket, char* command_line, char* filename)
 
 			// Receiving bytes from the socket.
 			received_size = recv(client_socket, file_chunk, chunk_size, 0);
-			printf("received %i bytes from server\n", received_size);
 			total_bytes += received_size;
 			send_ok('K', client_socket);
 
@@ -271,6 +270,18 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 		send_ok('K', client_socket);
 
 		// TODO: receive lock status of the file from the server (mutex)
+		char lock_status_buf[1];
+		recv(client_socket, lock_status_buf, 1, 0);
+		send_ok('K', client_socket);
+		char* lock_status;
+		if (lock_status_buf[0] == '1')
+		{
+			lock_status = "locked";
+		}
+		else
+		{
+			lock_status = "unlocked";
+		}
 
 		if (stat(source_path, &stats) != 0) 	// File ONLY exists on remote.
 		{
@@ -278,7 +289,7 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 			printf("- Remote Directory:\n");
 			printf("-- File Size: %s bytes.\n", remote_filesize_buf);
 			printf("-- Sync Status: unsynced.\n");
-			printf("-- Lock Status: PLACEHOLDER [implement threading+file_mutexs].\n");
+			printf("-- Lock Status: %s.\n", lock_status);
 		}
 		else		// File exists on BOTH remote and local.
 		{
@@ -303,7 +314,7 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 			printf("- Remote Directory:\n");
 			printf("-- File Size: %s bytes.\n", remote_filesize_buf);
 			printf("-- Sync Status: %s.\n", sync_status);
-			printf("-- Lock Status: PLACEHOLDER [implement threading+file_mutexs].\n");
+			printf("-- Lock Status: %s.\n", lock_status);
 		}
 	}
 }
@@ -386,11 +397,13 @@ int client_process(int client_socket, char* ip_address, char* user_commands)
 			/* Print each command/line 		TODO: don't print input command on line */ 
 			if (append_mode == 0)
 			{
-				printf("> %s\n", line);
+				//printf("> %s\n", line);
+				printf("> \n");
 			}
 			else
 			{
-				printf("Appending> %s\n", line);
+				//printf("Appending> %s\n", line);
+				printf("Appending> \n");
 			}
 			execute(line, client_socket, ip_address, &append_mode);
 		}
@@ -429,7 +442,7 @@ int start_client(char* user_commands, char* ip_address, int start_process)
         printf("\nConnection Failed \n");
         return -1;
     }
-	printf("client connected to server\n");
+	//printf("client connected to server\n");
 
     ///////////// Start sending and receiving process //////////////
 	if (start_process)
@@ -443,10 +456,10 @@ int main(int argc, char *argv[])
 {
 	char* user_commands = argv[1];
 	char* ip_address = argv[2];
-	printf("I am the client.\n");
+	/*printf("I am the client.\n");
 	printf("Input file name: %s\n", argv[1]);
 	printf("My server IP address: %s\n", argv[2]);
-	printf("-----------\n");
+	printf("-----------\n");*/
 
 	start_client(user_commands, ip_address, 1);
 

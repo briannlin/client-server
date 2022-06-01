@@ -224,7 +224,6 @@ void send_download(int client_socket, char* filename)
 
 			// Sending a chunk of file to the socket.
 			sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
-			printf("sent %i bytes to client\n", sent_bytes);
 			receive_ok(client_socket);
 
 			// Keep track of how many bytes we read/sent so far.
@@ -313,7 +312,8 @@ void append_to_file(int client_socket, char* filename)
 			else
 			{
 				printf("Appending \"%s\" to %s\n", line_buf, filename);
-				fprintf(fptr, "%s\n", line_buf);
+				fprintf(fptr, "\n%s", line_buf);
+				fflush(fptr);
 			}
 		}
 	}
@@ -348,7 +348,20 @@ void server_syncheck(int client_socket, char* filename)
 		MDFile(source_path, md5_buf);
 		md5_buf[16] = 0;
 		printf("sending md5 %s\n", md5_buf);
-		send(client_socket, md5_buf, 17, 0);
+		send(client_socket, md5_buf, 17, 0);			// send md5 hash of remote file
+		receive_ok(client_socket);
+
+		char lock_status[1];
+		if (lockStatus(filename))
+		{
+			lock_status[0] = '1';
+		}
+		else
+		{
+			lock_status[0] = '0';
+		}
+		printf("sending lockstatus %c\n", lock_status[0]);
+		send(client_socket, lock_status, 1, 0);
 		receive_ok(client_socket);
 	}
 }
