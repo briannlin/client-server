@@ -1,7 +1,7 @@
-pause 1
-upload jjk.png
-pause 5
-delete jjk.png
+append hello.txt
+more hello world
+pause 10
+close
 quit
 
 append hello.txt

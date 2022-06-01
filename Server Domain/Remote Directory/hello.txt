@@ -1,5 +1,8 @@
-Hello world!
-append bait.txt
-more hello
-append bait.txt
-more hello
+Hello from remote!
+more hello world
+more hello world
+more hello world
+more hello world
+more hello world
+more hello world
+more hello world

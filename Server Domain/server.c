@@ -132,7 +132,18 @@ char** tokenize(char* str)
 }
 
 // Sending and receiving an entire file.
-int receive_upload(int client_socket, char* filename){
+void receive_upload(int client_socket, char* filename){
+	if (lockStatus(filename) == 1)
+	{
+		printf("File %s is locked, cannot receive upload\n", filename);
+		send_ok('A', client_socket);
+		return;
+	}
+	else
+	{
+		send_ok('K', client_socket);
+	}
+
     int received_size;
 
 	char destination_path[100];
@@ -167,11 +178,17 @@ int receive_upload(int client_socket, char* filename){
         fwrite(&file_chunk, sizeof(char), received_size, fptr);
 //        printf("Client: file_chunk data is:\n%s\n\n", file_chunk);
     }
-    return 0;
 }
 
 void send_download(int client_socket, char* filename)
 {
+	if (lockStatus(filename) == 1)
+	{
+		printf("File %s is locked, cannot download\n", filename);
+		send_ok('A', client_socket);
+		return;
+	}
+
 	FILE *fptr;
 
 	char source_path[100];
@@ -207,6 +224,7 @@ void send_download(int client_socket, char* filename)
 
 			// Sending a chunk of file to the socket.
 			sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
+			printf("sent %i bytes to client\n", sent_bytes);
 			receive_ok(client_socket);
 
 			// Keep track of how many bytes we read/sent so far.
@@ -224,11 +242,17 @@ void send_download(int client_socket, char* filename)
 		fclose(fptr);
 		printf("%i bytes uploaded to local successfully.\n", total_bytes);
 	}
-
 }
 
 void delete_file(int client_socket, char* filename)
 {
+	if (lockStatus(filename) == 1)
+	{
+		printf("File %s is locked, cannot delete\n", filename);
+		send_ok('A', client_socket);
+		return;
+	}
+
 	char source_path[100];
 	strcpy(source_path, "./Remote Directory/");
 	strcat(source_path, filename);
@@ -247,9 +271,16 @@ void delete_file(int client_socket, char* filename)
 
 void append_to_file(int client_socket, char* filename)
 {
-
+	if (lockStatus(filename) == 1)
+	{
+		printf("File %s is locked, cannot append\n", filename);
+		send_ok('A', client_socket);
+		return;
+	}
+	
 	// Try and open file: if successful, then change into append mode (loop). 
 	// If not successful (file DNE), return N to client
+	// If file locked, return A to client
 	char destination_path[100];
 	strcpy(destination_path, "./Remote Directory/");
 	strcat(destination_path, filename);
@@ -264,6 +295,8 @@ void append_to_file(int client_socket, char* filename)
 	}
 	else
 	{
+		printf("Locking file %s\n", filename);
+		lock(filename);
 		fptr = fopen(destination_path, "ab");
 		send_ok('K', client_socket);
 		char line_buf[MAXLINE];
@@ -272,7 +305,8 @@ void append_to_file(int client_socket, char* filename)
 			recv(client_socket, line_buf, MAXLINE, 0);
 			if (strcmp(line_buf, "close") == 0)
 			{
-				printf("Closing file %s\n", filename);
+				printf("Unlocking and closing file %s\n", filename);
+				unlock(filename);
 				fclose(fptr);
 				break;
 			}
@@ -343,7 +377,6 @@ void* server_process(void* vargp){
 		char* command = tokens[0];
 		if (strcmp(command, "upload") == 0)
 		{
-			send_ok('K', client_socket);
 			char* filename = tokens[1];
 			printf("upload filename: %s\n", filename);
 			receive_upload(client_socket, filename);

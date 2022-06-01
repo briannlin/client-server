@@ -13,11 +13,11 @@
 
 int start_client(char* user_commands, char* ip_address, int start_process);
 
-int receive_ok(int client_socket)
+char receive_ok(client_socket)
 {
 	char okay[1];
-	recv(client_socket, okay, 1, 0);		   // receive OK from server
-	return okay[0] == 'K';
+	recv(client_socket, okay, 1, 0);		   // receive OK (or smt else) from server
+	return okay[0];
 }
 
 void send_ok(char k, int client_socket)
@@ -66,10 +66,12 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 	else
 	{
 		// Send to server: command
-		//char okay[1];
 		send(client_socket, command_line, MAXLINE, 0);        // send command to server
-		//recv(client_socket, okay, 1, 0);		   // receive OK from server
-		receive_ok(client_socket);
+		if (receive_ok(client_socket) != 'K')
+		{
+			printf("File [%s] is currently locked by another user.\n", filename);
+			return;
+		}
 
 		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
 		int file_size = ftell(fptr);  // Get file size.
@@ -105,9 +107,14 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 void client_download(int client_socket, char* command_line, char* filename)
 {
 	send(client_socket, command_line, MAXLINE, 0);        // send command to server
-	if (!receive_ok(client_socket))
+	char ok_response = receive_ok(client_socket);
+	if (ok_response == 'N')
 	{
 		printf("File [%s] could not be found in remote directory.\n", filename);
+	}
+	else if (ok_response == 'A')
+	{
+		printf("File [%s] is currently locked by another user.\n", filename);
 	}
 	else
 	{
@@ -134,6 +141,7 @@ void client_download(int client_socket, char* command_line, char* filename)
 
 			// Receiving bytes from the socket.
 			received_size = recv(client_socket, file_chunk, chunk_size, 0);
+			printf("received %i bytes from server\n", received_size);
 			total_bytes += received_size;
 			send_ok('K', client_socket);
 
@@ -146,7 +154,7 @@ void client_download(int client_socket, char* command_line, char* filename)
 			// Writing the received bytes into disk.
 			fwrite(&file_chunk, sizeof(char), received_size, fptr);
 			
-			if (!receive_ok(client_socket))
+			if (receive_ok(client_socket) == 'N')
 			{
 				fclose(fptr);
 				break;
@@ -159,9 +167,14 @@ void client_download(int client_socket, char* command_line, char* filename)
 void client_delete(int client_socket, char* command_line, char* filename)
 {
 	send(client_socket, command_line, MAXLINE, 0);        // send command to server
-	if (!receive_ok(client_socket))
+	char ok_response = receive_ok(client_socket);
+	if (ok_response == 'N')
 	{
 		printf("File [%s] could not be found in remote directory.\n", filename);
+	}
+	else if (ok_response == 'A')
+	{
+		printf("File [%s] is currently locked by another user.\n", filename);
 	}
 	else
 	{
@@ -199,9 +212,14 @@ void client_append(int client_socket, char* command_line, char* filename, int* a
 	{
 		// Not in append mode: Try and open file on server, if successful go into append mode
 		send(client_socket, command_line, MAXLINE, 0);        // send command to server
-		if (!receive_ok(client_socket))
+		char ok_response = receive_ok(client_socket);
+		if (ok_response == 'N')
 		{
 			printf("File [%s] could not be found in remote directory.\n", filename);
+		}
+		else if (ok_response == 'A')
+		{
+			printf("File [%s] is currently locked by another user.\n", filename);
 		}
 		else
 		{
@@ -215,7 +233,7 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 	struct stat stats;
 	send(client_socket, command_line, MAXLINE, 0);        // send command to server
 
-	if (!receive_ok(client_socket)) 	// File doesn't exist on remote directory.
+	if (receive_ok(client_socket) != 'K') 	// File doesn't exist on remote directory.
 	{	
 		send_ok('K', client_socket);
 
@@ -375,9 +393,6 @@ int client_process(int client_socket, char* ip_address, char* user_commands)
 				printf("Appending> %s\n", line);
 			}
 			execute(line, client_socket, ip_address, &append_mode);
-
-			//send(client_socket, line, strlen(line), 0);
-			//sleep(1);
 		}
 		
 		/* Close file */

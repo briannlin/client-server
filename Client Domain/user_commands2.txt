@@ -1,4 +1,4 @@
-upload me.jpg
-pause 5
-delete me.jpg
+delete hello.txt
+pause 10
+delete hello.txt
 quit
