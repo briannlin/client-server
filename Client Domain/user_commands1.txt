@@ -1,5 +1,13 @@
+pause 1
+upload jjk.png
+pause 5
+delete jjk.png
+quit
+
 append hello.txt
 pause 10
+append more hello
+pause 5
 close
 quit
 

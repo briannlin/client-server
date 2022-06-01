@@ -14,8 +14,88 @@
 #define PORT 9999
 #define MAXARGS 5
 #define MAXLINE 100
+#define MAX_THREADS 100
+#define MAX_FILES 100
 
-pthread_t client_threads[100];
+
+pthread_t client_threads[MAX_THREADS];
+
+struct ServerFile
+{
+	int id;
+	char* filename;
+	int locked;
+};
+struct ServerFile server_files[MAX_FILES];
+
+
+void lock(char* filename)
+{
+	for (int i = 0; i < MAX_FILES; i++)
+	{
+		 if (server_files[i].id == -1)
+		 {
+			// If trying to lock a file that doesn't have an entry in server_files, create a new locked ServerFile
+			server_files[i].id = i;
+			char* filename_str = malloc(MAXLINE+1);
+            strcpy(filename_str, filename);
+			server_files[i].filename = filename_str;
+			server_files[i].locked = 1;
+			return;
+		 }
+		 else if (strcmp(server_files[i].filename, filename) == 0)
+		 {
+			 // Found file, lock it
+			 server_files[i].locked = 1;
+			 return;
+		 }
+	}
+}
+
+void unlock(char* filename)
+{
+	for (int i = 0; i < MAX_FILES; i++)
+	{
+		 if (server_files[i].id == -1)
+		 {
+			// If trying to unlock a file that doesn't have an entry in server_files, create a new unlocked ServerFile
+			server_files[i].id = i;
+			char* filename_str = malloc(MAXLINE+1);
+            strcpy(filename_str, filename);
+			server_files[i].filename = filename_str;
+			server_files[i].locked = 0;
+			return;
+		 }
+		 else if (strcmp(server_files[i].filename, filename) == 0)
+		 {
+			 // Found file, unlock it
+			 server_files[i].locked = 0;
+			 return;
+		 }
+	}
+}
+
+int lockStatus(char* filename)
+{
+	// Locked: 1
+	// Unlocked: 0 
+	for (int i = 0; i < MAX_FILES; i++)
+	{
+		if (server_files[i].id == -1)
+		{
+			// File hasn't been accessed by any client, so it must not have been appended to ever, so it must
+			// be in an unlocked state.
+			return 0;
+		}
+		else if (strcmp(server_files[i].filename, filename) == 0)
+		{
+			// Found file, return its lock status
+			return server_files[i].locked;
+		}
+	}
+	return 0;
+}
+
 
 void send_ok(char k, int client_socket)
 {
@@ -77,7 +157,7 @@ int receive_upload(int client_socket, char* filename){
         received_size = recv(client_socket, file_chunk, chunk_size, 0);
         /*printf("Client: received %i bytes from server.\n", received_size);*/
 
-        // The server has closed the connection.
+        // The client has closed the connection.
         // Note: the server will only close the connection when the application terminates.
         if (received_size == 0){
             fclose(fptr);
@@ -343,6 +423,7 @@ int start_server(char* ip_address)
 			exit(EXIT_FAILURE);
 		}
 
+		// Create separate thread to handle client request
 		if (pthread_create(&client_threads[i++], NULL, server_process, (void *)client_socket) != 0)
 		{
 			// Error in creating thread
@@ -354,9 +435,7 @@ int start_server(char* ip_address)
 		}
 
 		///////////// Start sending and receiving process //////////////
-		//server_process(client_socket);
 	}
-	// TODO: CLOSE SOCKETS WHEN CTRL C - SIGINT?
     return 0;
 
 }
@@ -364,6 +443,12 @@ int start_server(char* ip_address)
 
 int main(int argc, char *argv[])
 {
+	// Initialize server file array to be null
+	for (int i = 0; i < MAX_FILES; i++)
+    {
+        server_files[i].id = -1;
+    }
+
 	char* ip_address = argv[1];
 	printf("I am the server.\n");
 	printf("Server IP address: %s\n", ip_address); // TODO: read ip addr from cmdline

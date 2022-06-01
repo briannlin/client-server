@@ -1,0 +1,4 @@
+upload me.jpg
+pause 5
+delete me.jpg
+quit
