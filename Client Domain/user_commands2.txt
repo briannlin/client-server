@@ -1,6 +1,0 @@
-download hello.txt
-syncheck hello.txt
-pause 2
-download hello.txt
-close
-quit

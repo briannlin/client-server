@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -16,7 +17,11 @@ int start_client(char* user_commands, char* ip_address, int start_process);
 char receive_ok(client_socket)
 {
 	char okay[1];
-	recv(client_socket, okay, 1, 0);		   // receive OK (or smt else) from server
+	int received_size = recv(client_socket, okay, 1, 0);	// receive OK (or smt else) from server
+	if (received_size == 0)
+	{
+		exit(0);
+	}
 	return okay[0];
 }
 
@@ -51,8 +56,6 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 {
 	/* upload a file from the local directory to the remote directory*/
 	FILE *fptr;
-    int chunk_size = 1000;
-    char file_chunk[chunk_size];
 
 	char source_path[100];
 	strcpy(source_path, "./Local Directory/");
@@ -73,6 +76,8 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 			return;
 		}
 
+		int chunk_size = 1000;
+    	char file_chunk[chunk_size];
 		fseek(fptr, 0L, SEEK_END);  // Sets the pointer at the end of the file.
 		int file_size = ftell(fptr);  // Get file size.
 		fseek(fptr, 0L, SEEK_SET);  // Sets the pointer back to the beginning of the file.
@@ -80,6 +85,11 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 		int total_bytes = 0;  // Keep track of how many bytes we read so far.
 		int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
 		ssize_t sent_bytes;
+
+		char file_size_str[80];
+   		sprintf(file_size_str, "%i", file_size);
+		send(client_socket, file_size_str, 80, 0);
+		receive_ok(client_socket);
 
 		while (total_bytes < file_size){
 			// Clean the memory of previous bytes.
@@ -90,17 +100,16 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 
 			// Sending a chunk of file to the socket.
 			sent_bytes = send(client_socket, &file_chunk, current_chunk_size, 0);
+			receive_ok(client_socket);
 
 			// Keep track of how many bytes we read/sent so far.
 			total_bytes = total_bytes + sent_bytes;
 
-			/*printf("Client: sent to server %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);*/
+			printf("Client: sent to server %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);
 
 		}
 		fclose(fptr);
 		printf("%i bytes uploaded successfully.\n", total_bytes);
-		close(client_socket);
-		start_client("0", ip_address, 0);
 	}
 }
 
@@ -141,6 +150,11 @@ void client_download(int client_socket, char* command_line, char* filename)
 
 			// Receiving bytes from the socket.
 			received_size = recv(client_socket, file_chunk, chunk_size, 0);
+			//printf("Received %i bytes from server\n", received_size);
+			if (received_size == 0)
+			{
+				exit(0);
+			}
 			total_bytes += received_size;
 			send_ok('K', client_socket);
 
@@ -260,18 +274,32 @@ void client_syncheck(int client_socket, char* command_line, char* filename)
 		strcpy(source_path, "./Local Directory/");
 		strcat(source_path, filename);
 
+		int received_size;
 		char remote_filesize_buf[15]; 
-		recv(client_socket, remote_filesize_buf, 15, 0);	// Receive file size of remote file
+		received_size = recv(client_socket, remote_filesize_buf, 15, 0);	// Receive file size of remote file
+		if (received_size == 0)
+		{
+			exit(0);
+		}
 		send_ok('K', client_socket);
 
 		// Receive md5 of file on the server
 		char remote_md5_buf[17];
-		recv(client_socket, remote_md5_buf, 17, 0);
+		received_size = recv(client_socket, remote_md5_buf, 17, 0);
+		if (received_size == 0)
+		{
+			exit(0);
+		}
 		send_ok('K', client_socket);
 
 		// TODO: receive lock status of the file from the server (mutex)
 		char lock_status_buf[1];
-		recv(client_socket, lock_status_buf, 1, 0);
+		received_size = recv(client_socket, lock_status_buf, 1, 0);
+		if (received_size == 0)
+		{
+			exit(0);
+		}
+
 		send_ok('K', client_socket);
 		char* lock_status;
 		if (lock_status_buf[0] == '1')
@@ -397,13 +425,13 @@ int client_process(int client_socket, char* ip_address, char* user_commands)
 			/* Print each command/line 		TODO: don't print input command on line */ 
 			if (append_mode == 0)
 			{
-				//printf("> %s\n", line);
-				printf("> \n");
+				printf("> %s\n", line);
+				//printf("> \n");
 			}
 			else
 			{
-				//printf("Appending> %s\n", line);
-				printf("Appending> \n");
+				printf("Appending> %s\n", line);
+				//printf("Appending> \n");
 			}
 			execute(line, client_socket, ip_address, &append_mode);
 		}
@@ -424,6 +452,7 @@ int start_client(char* user_commands, char* ip_address, int start_process)
 
     client_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
     if (client_socket < 0) {
+		perror("client: socket connection error");
         printf("\n Socket creation error \n");
         return -1;
     }
@@ -435,11 +464,13 @@ int start_client(char* user_commands, char* ip_address, int start_process)
     int addr_status = inet_pton(AF_INET, ip_address, &serv_addr.sin_addr);
     if (addr_status <= 0) {
         printf("\nInvalid address/ Address not supported \n");
+		perror("client: invalid address");
         return -1;
     }
     int connect_status = connect(client_socket, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
     if (connect_status < 0) {
         printf("\nConnection Failed \n");
+		perror("client: connection failed");
         return -1;
     }
 	//printf("client connected to server\n");

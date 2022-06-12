@@ -1,0 +1,4 @@
+upload something
+upload file1.txt
+upload file2.jpeg
+quit

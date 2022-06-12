@@ -376,7 +376,6 @@ char* buffer;
   int i;
   for (i = 0; i < 16; i++)
   {
-	printf ("%02x.", mdContext->digest[i]);
 	buffer[i] = mdContext->digest[i];
   }
   buffer[16] = 0;
@@ -467,7 +466,7 @@ char* hash_buffer;
     MD5Update (&mdContext, data, bytes);
   MD5Final (&mdContext);
   MDPrint (&mdContext, hash_buffer);
-  printf (" %s\n", filename);
+  //printf (" %s\n", filename);
   fclose (inFile);
 }
 

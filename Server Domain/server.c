@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -145,12 +146,14 @@ void receive_upload(int client_socket, char* filename){
 	}
 
     int received_size;
+	int total_bytes = 0;
 
 	char destination_path[100];
 	strcpy(destination_path, "./Remote Directory/");
 	strcat(destination_path, filename);
 	
     int chunk_size = 1000;
+
     char file_chunk[chunk_size];
 //    int chunk_counter = 0;
 
@@ -159,25 +162,26 @@ void receive_upload(int client_socket, char* filename){
     // Opening a new file in write-binary mode to write the received file bytes into the disk using fptr.
     fptr = fopen(destination_path,"wb");
 
+	char file_size_str[80];
+	recv(client_socket, file_size_str, 80, 0);
+	int file_size = atoi(file_size_str);
+	printf("Expected file size: %i\n", file_size);
+	send_ok('K', client_socket);
+
     // Keep receiving bytes until we receive the whole file.
-    while (1){
+    while (total_bytes < file_size){
         bzero(file_chunk, chunk_size);
-//        memset(&file_chunk, 0, chunk_size);
 
         // Receiving bytes from the socket.
         received_size = recv(client_socket, file_chunk, chunk_size, 0);
-        /*printf("Client: received %i bytes from server.\n", received_size);*/
+		send_ok('K', client_socket);
+		total_bytes += received_size;
 
-        // The client has closed the connection.
-        // Note: the server will only close the connection when the application terminates.
-        if (received_size == 0){
-            fclose(fptr);
-            break;
-        }
         // Writing the received bytes into disk.
         fwrite(&file_chunk, sizeof(char), received_size, fptr);
-//        printf("Client: file_chunk data is:\n%s\n\n", file_chunk);
     }
+	fclose(fptr);
+	printf("%i bytes downloaded successfully.\n", total_bytes);
 }
 
 void send_download(int client_socket, char* filename)
@@ -231,6 +235,7 @@ void send_download(int client_socket, char* filename)
 
 			if (file_size == total_bytes)
 			{
+				fclose(fptr);
 				send_ok('N', client_socket);
 			}
 			else
@@ -238,7 +243,7 @@ void send_download(int client_socket, char* filename)
 				send_ok('K', client_socket);
 			}
 		}
-		fclose(fptr);
+		//fclose(fptr);
 		printf("%i bytes uploaded to local successfully.\n", total_bytes);
 	}
 }
@@ -283,7 +288,7 @@ void append_to_file(int client_socket, char* filename)
 	char destination_path[100];
 	strcpy(destination_path, "./Remote Directory/");
 	strcat(destination_path, filename);
-
+	printf("source path: %s\n", destination_path);
 	int fd;
 	FILE *fptr;
 	fd = open(destination_path, O_APPEND);
@@ -449,7 +454,7 @@ int start_server(char* ip_address)
 
     int bind_status = bind(server_socket, (struct sockaddr*)&address, sizeof(address));
     if (bind_status < 0) {
-        perror("bind failed");
+        perror("server bind failed");
         exit(EXIT_FAILURE);
     }
 	printf("server binded\n");
