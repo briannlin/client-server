@@ -1,4 +1,4 @@
-upload something
-upload file1.txt
-upload file2.jpeg
+download something
+download file1.txt
+download file2.jpeg
 quit

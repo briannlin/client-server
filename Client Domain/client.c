@@ -86,6 +86,7 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 		int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
 		ssize_t sent_bytes;
 
+		// Send to server the expected file size it should receive.
 		char file_size_str[80];
    		sprintf(file_size_str, "%i", file_size);
 		send(client_socket, file_size_str, 80, 0);
@@ -105,7 +106,7 @@ void client_upload(int client_socket, char* ip_address, char* command_line, char
 			// Keep track of how many bytes we read/sent so far.
 			total_bytes = total_bytes + sent_bytes;
 
-			printf("Client: sent to server %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);
+			//printf("Client: sent to server %zi bytes. Total bytes sent so far = %i.\n", sent_bytes, total_bytes);
 
 		}
 		fclose(fptr);
@@ -143,35 +144,27 @@ void client_download(int client_socket, char* command_line, char* filename)
 		// Opening a new file in write-binary mode to write the received file bytes into the disk using fptr.
 		fptr = fopen(destination_path,"wb");
 
+		// Receive the expected file size to download.
+		char file_size_str[80];
+		recv(client_socket, file_size_str, 80, 0);
+		int file_size = atoi(file_size_str);
+		//printf("Expected file size: %i\n", file_size);
+		send_ok('K', client_socket);
+
 		// Keep receiving bytes until we receive the whole file.
-		while (1){
+		while (total_bytes < file_size){
 			bzero(file_chunk, chunk_size);
 	//        memset(&file_chunk, 0, chunk_size);
 
 			// Receiving bytes from the socket.
 			received_size = recv(client_socket, file_chunk, chunk_size, 0);
-			//printf("Received %i bytes from server\n", received_size);
-			if (received_size == 0)
-			{
-				exit(0);
-			}
-			total_bytes += received_size;
 			send_ok('K', client_socket);
+			total_bytes += received_size;
+			//printf("Client: downloaded from server %i bytes. Total bytes downloaded so far = %i.\n", received_size, total_bytes);
 
-			// The server has closed the connection.
-			// Note: the server will only close the connection when the application terminates.
-			/*if (received_size == 0){
-				fclose(fptr);
-				break;
-			}*/
+
 			// Writing the received bytes into disk.
 			fwrite(&file_chunk, sizeof(char), received_size, fptr);
-			
-			if (receive_ok(client_socket) == 'N')
-			{
-				fclose(fptr);
-				break;
-			}
 		}
 		printf("%i bytes downloaded successfully.\n", total_bytes);
 	}

@@ -162,6 +162,7 @@ void receive_upload(int client_socket, char* filename){
     // Opening a new file in write-binary mode to write the received file bytes into the disk using fptr.
     fptr = fopen(destination_path,"wb");
 
+    // Receive the expected file size to be uploaded.
 	char file_size_str[80];
 	recv(client_socket, file_size_str, 80, 0);
 	int file_size = atoi(file_size_str);
@@ -219,6 +220,12 @@ void send_download(int client_socket, char* filename)
 		int current_chunk_size;  // Keep track of how many bytes we were able to read from file (helpful for the last chunk).
 		ssize_t sent_bytes;
 
+        // Send to server the expected file size it should receive.
+        char file_size_str[80];
+   		sprintf(file_size_str, "%i", file_size);
+		send(client_socket, file_size_str, 80, 0);
+		receive_ok(client_socket);
+
 		while (total_bytes < file_size){
 			// Clean the memory of previous bytes.
 			bzero(file_chunk, chunk_size);
@@ -233,17 +240,8 @@ void send_download(int client_socket, char* filename)
 			// Keep track of how many bytes we read/sent so far.
 			total_bytes = total_bytes + sent_bytes;
 
-			if (file_size == total_bytes)
-			{
-				fclose(fptr);
-				send_ok('N', client_socket);
-			}
-			else
-			{
-				send_ok('K', client_socket);
-			}
 		}
-		//fclose(fptr);
+		fclose(fptr);
 		printf("%i bytes uploaded to local successfully.\n", total_bytes);
 	}
 }
